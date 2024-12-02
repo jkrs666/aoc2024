@@ -2,47 +2,35 @@ import Enum
 
 defmodule Day2 do
   def safe?(list) do
-    list |> anomaly? |> empty? &&
-      list |> spike? |> empty?
+    not (list |> anomaly?) && not (list |> spike?)
   end
 
   def safe2?(list) do
-    unsafe_indexes = ((list |> anomaly?) ++ (list |> spike?)) |> List.flatten()
+    case safe?(list) do
+      true ->
+        true
 
-    case unsafe_indexes do
-      [] -> true
-      _ -> unsafe_indexes |> map(&List.delete_at(list, &1)) |> any?(&safe?/1)
+      _ ->
+        0..length(list)
+        |> map(&List.delete_at(list, &1))
+        |> any?(&safe?/1)
     end
   end
 
   def anomaly?(list) do
     list
     |> chunk_every(3, 1, :discard)
-    |> with_index
-    |> map(fn {[a, x, b], index} ->
-      %{
-        pos: [index, index + 2],
-        elem: [a, x, b],
-        anomaly: (a - x) * (x - b) <= 0
-      }
+    |> any?(fn [a, x, b] ->
+      (a - x) * (x - b) <= 0
     end)
-    |> filter(& &1.anomaly)
-    |> map(fn %{pos: x} -> x end)
   end
 
   def spike?(list) do
     list
     |> chunk_every(2, 1, :discard)
-    |> with_index
-    |> map(fn {[a, b], index} ->
-      %{
-        pos: [index - 1, index, index + 1],
-        elem: [a, b],
-        spike: abs(a - b) not in 1..3
-      }
+    |> any?(fn [a, b] ->
+      abs(a - b) not in 1..3
     end)
-    |> filter(& &1.spike)
-    |> map(fn %{pos: x} -> x end)
   end
 end
 
