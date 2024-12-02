@@ -21,7 +21,7 @@ defmodule Day2 do
     |> with_index
     |> map(fn {[a, x, b], index} ->
       %{
-        pos: [index, index + 2],
+        pos: [index, index + 1, index + 2],
         elem: [a, x, b],
         anomaly: (a - x) * (x - b) <= 0
       }
@@ -36,7 +36,7 @@ defmodule Day2 do
     |> with_index
     |> map(fn {[a, b], index} ->
       %{
-        pos: [index - 1, index, index + 1],
+        pos: [index, index + 1],
         elem: [a, b],
         spike: abs(a - b) not in 1..3
       }
