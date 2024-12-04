@@ -19,19 +19,18 @@ input = File.read!("4.input")
 
 diags = fn grid ->
   n = (grid |> length) - 1
-  first_row = 0..n |> map(fn i -> {0, i} end)
-  first_col = 0..(n - 1) |> map(fn i -> {i, 0} end)
-  last_row = 0..n |> map(fn i -> {n, i} end)
-  last_col = 1..n |> map(fn i -> {i, n} end)
+  first_row = 0..n |> map(&{0, &1})
+  first_col = 0..(n - 1) |> map(&{&1, 0})
+  last_row = 0..n |> map(&{n, &1})
+  last_col = 1..n |> map(&{&1, n})
 
   (((first_row ++ last_col) |> map(fn {a, b} -> zip(a..b, b..a) end)) ++
      ((last_row ++ first_col) |> map(fn {a, b} -> zip(a..b, b..a) end)))
   |> map(&(&1 |> map(fn {y, x} -> grid |> at(x) |> at(y) end)))
 end
 
-transpose = fn grid ->
-  grid |> zip |> map(&Tuple.to_list(&1))
-end
+transpose = fn grid -> grid |> zip |> map(&Tuple.to_list(&1)) end
+flat_count = fn x -> x |> List.flatten() |> count(& &1) end
 
 xmas = fn row ->
   row
@@ -55,25 +54,20 @@ xmas2? = fn {x, y}, grid ->
   end
 end
 
-flat_count = fn x -> x |> List.flatten() |> count(& &1) end
-
 grid =
   input
   |> String.split("\n", trim: true)
   |> map(&String.codepoints(&1))
 
-columns = grid |> transpose.()
-diags = grid |> diags.()
-
 part1 =
-  (grid ++ columns ++ diags)
+  (grid ++ transpose.(grid) ++ diags.(grid))
   |> map(&xmas.(&1))
   |> flat_count.()
 
 n = (grid |> length) - 2
 
 part2 =
-  for(y <- 1..n, x <- 1..n, do: xmas2?.({x, y}, grid))
+  for(x <- 1..n, y <- 1..n, do: xmas2?.({x, y}, grid))
   |> flat_count.()
 
 {part1, part2} |> IO.inspect()
