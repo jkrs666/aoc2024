@@ -3,16 +3,8 @@ input = File.read!("6.input")
 
 defmodule Solve do
   def get_dir(i) do
-    [
-      # up
-      {0, -1},
-      # right
-      {1, 0},
-      # down
-      {0, 1},
-      # left
-      {-1, 0}
-    ]
+    # up right down left
+    [{0, -1}, {1, 0}, {0, 1}, {-1, 0}]
     |> at(i)
   end
 
@@ -20,77 +12,37 @@ defmodule Solve do
     x not in 0..n or y not in 0..n
   end
 
-  def loop?(grid, current, rotations, history, obstacles) do
+  def step(edge, current, rotations, history, obstacles) do
     rotations = Integer.mod(rotations, 4)
-    n = length(grid) - 1
     {x, y} = current
     {xd, yd} = get_dir(rotations)
     next = {x + xd, y + yd}
 
     cond do
-      out_of_bounds?(n, current) ->
-        false
-
-      out_of_bounds?(n, next) ->
-        false
-
-      {current, rotations} in history ->
-        true
-
-      next in obstacles ->
-        loop?(
-          grid,
-          current,
-          rotations + 1,
-          history ++ [{current, rotations}],
-          obstacles
-        )
-
-      true ->
-        loop?(
-          grid,
-          next,
-          rotations,
-          history ++ [{current, rotations}],
-          obstacles
-        )
-    end
-  end
-
-  def step(grid, current, rotations, history, obstacles) do
-    rotations = Integer.mod(rotations, 4)
-    n = length(grid) - 1
-    {x, y} = current
-    {xd, yd} = get_dir(rotations)
-    next = {x + xd, y + yd}
-    {next_x, next_y} = next
-
-    history = history ++ [{current, rotations}]
-
-    cond do
-      next_x not in 0..n or next_y not in 0..n ->
+      out_of_bounds?(edge, next) ->
         %{
-          last: next,
-          rotations: rotations,
-          history: history,
-          part1: history |> map(fn {point, _} -> point end) |> uniq |> length
+          loop: false,
+          history: [{current, rotations} | history]
         }
 
+      {current, rotations} in history ->
+        %{loop: true}
+
       next in obstacles ->
         step(
-          grid,
+          edge,
           current,
           rotations + 1,
-          history,
+          [{current, rotations} | history],
           obstacles
         )
 
       true ->
         step(
-          grid,
+          edge,
           next,
           rotations,
-          history,
+          [{current, rotations} | history],
           obstacles
         )
     end
@@ -103,23 +55,35 @@ grid =
   |> map(&String.codepoints(&1))
 
 n = length(grid) - 1
+points = for(x <- 0..n, y <- 0..n, do: {x, y})
 
 start =
-  for(x <- 0..n, y <- 0..n, do: {x, y})
+  points
   |> find(fn {x, y} -> grid |> at(y) |> at(x) == "^" end)
 
 obstacles =
-  for(x <- 0..n, y <- 0..n, do: {x, y})
+  points
   |> filter(fn {x, y} -> grid |> at(y) |> at(x) == "#" end)
 
-%{part1: part1, history: history} = Solve.step(grid, start, 0, [], obstacles)
-IO.inspect(part1)
+%{history: history} = Solve.step(n, start, 0, [], obstacles)
+
+part1 =
+  history
+  |> map(fn {point, _} -> point end)
+  |> uniq
+  |> count
 
 part2 =
   history
   |> map(fn {p, _} -> p end)
   |> uniq
-  |> map(&(true == Solve.loop?(grid, start, 0, [], [&1 | obstacles])))
-  |> count(&(&1 == true))
+  |> Task.async_stream(&Solve.step(n, start, 0, [], [&1 | obstacles]))
+  |> count(fn {:ok, %{loop: loop}} -> loop == true end)
 
-IO.inspect(part2)
+{part1, part2} |> IO.inspect()
+
+# {4967, 1789}
+#
+# real    0m58.083s
+# user    11m16.741s
+# sys     0m3.661s
