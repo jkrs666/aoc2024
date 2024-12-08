@@ -2,46 +2,33 @@ import Enum
 input = File.read!("7.input")
 
 defmodule Solve do
-  def perms2(operators, n) do
-    max =
-      2 ** n - 1
-
-    for i <- 0..max do
-      # split int to binary
-      for <<(b::1 <- <<i::size(n)>>)>> do
-        operators |> at(b)
-      end
-    end
-  end
-
   def pad(list, n) do
     len = list |> length
     List.duplicate(0, n - len) ++ list
   end
 
-  def perms3(operators, n) do
-    max = 3 ** n - 1
+  def perms(functions, n) do
+    base = functions |> length
+    max = base ** n - 1
 
-    for i <- 0..max do
-      for b3 <- Integer.digits(i, 3) |> pad(n) do
-        operators |> at(b3)
-      end
-    end
+    0..max
+    |> Stream.map(fn i ->
+      Integer.digits(i, base)
+      |> pad(n)
+      |> map(&at(functions, &1))
+    end)
   end
 
-  def reduce3([a, b], [f]) do
-    f.(a, b)
-  end
+  def reduce3([a, b], [f]), do: f.(a, b)
 
   def reduce3([a, b | nums], [f | functions]) do
     reduce3([f.(a, b) | nums], functions)
   end
 
-  def calibrate({true_value, operands}, functions, perms_fn) do
+  def calibrate({true_value, operands}, functions) do
     functions
-    |> perms_fn.(length(operands) - 1)
-    |> map(&reduce3(operands, &1))
-    |> find(0, &(&1 == true_value))
+    |> perms(length(operands) - 1)
+    |> find_value(0, &if(true_value == reduce3(operands, &1), do: true_value))
   end
 end
 
@@ -53,7 +40,9 @@ calibrations =
 
     {
       value |> String.to_integer(),
-      operands |> String.split(" ", trim: true) |> map(&String.to_integer(&1))
+      operands
+      |> String.split(" ", trim: true)
+      |> map(&String.to_integer/1)
     }
   end)
 
@@ -62,22 +51,19 @@ functions = [
   fn a, b -> a * b end
 ]
 
+functions2 = [
+  fn a, b -> a * 10 ** count(Integer.digits(b)) + b end
+  | functions
+]
+
 part1 =
   calibrations
-  |> map(&Solve.calibrate(&1, functions, fn a, b -> Solve.perms2(a, b) end))
-  |> sum
+  |> Task.async_stream(&Solve.calibrate(&1, functions))
+  |> reduce(0, fn {:ok, num}, acc -> acc + num end)
 
 part2 =
   calibrations
-  |> map(
-    &Solve.calibrate(
-      &1,
-      [
-        fn a, b -> a * 10 ** (Integer.digits(b) |> length) + b end
-        | functions
-      ],
-      fn a, b -> Solve.perms3(a, b) end
-    )
-  )
-  |> sum
-  |> dbg(charlists: :as_lists, limit: :infinity)
+  |> Task.async_stream(&Solve.calibrate(&1, functions2))
+  |> reduce(0, fn {:ok, num}, acc -> acc + num end)
+
+{part1, part2} |> IO.inspect()
