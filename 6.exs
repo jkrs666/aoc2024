@@ -22,7 +22,7 @@ defmodule Solve do
       out_of_bounds?(edge, next) ->
         %{
           loop: false,
-          history: [{current, rotations} | history]
+          history: history |> MapSet.put({current, rotations})
         }
 
       {current, rotations} in history ->
@@ -33,7 +33,7 @@ defmodule Solve do
           edge,
           current,
           rotations + 1,
-          [{current, rotations} | history],
+          history |> MapSet.put({current, rotations}),
           obstacles
         )
 
@@ -42,7 +42,7 @@ defmodule Solve do
           edge,
           next,
           rotations,
-          [{current, rotations} | history],
+          history |> MapSet.put({current, rotations}),
           obstacles
         )
     end
@@ -64,8 +64,16 @@ start =
 obstacles =
   points
   |> filter(fn {x, y} -> grid |> at(y) |> at(x) == "#" end)
+  |> MapSet.new()
 
-%{history: history} = Solve.step(n, start, 0, [], obstacles)
+%{history: history} =
+  Solve.step(
+    n,
+    start,
+    0,
+    %MapSet{},
+    obstacles
+  )
 
 part1 =
   history
@@ -77,13 +85,21 @@ part2 =
   history
   |> map(fn {p, _} -> p end)
   |> uniq
-  |> Task.async_stream(&Solve.step(n, start, 0, [], [&1 | obstacles]))
-  |> count(fn {:ok, %{loop: loop}} -> loop == true end)
+  |> Task.async_stream(
+    &Solve.step(
+      n,
+      start,
+      0,
+      %MapSet{},
+      obstacles |> MapSet.put(&1)
+    )
+  )
+  |> count(fn {:ok, %{loop: loop}} -> loop end)
 
 {part1, part2} |> IO.inspect()
 
 # {4967, 1789}
 #
-# real    0m58.083s
-# user    11m16.741s
-# sys     0m3.661s
+# real    0m7.108s
+# user    1m16.674s
+# sys     0m3.574s
