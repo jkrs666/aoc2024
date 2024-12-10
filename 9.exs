@@ -124,3 +124,9 @@ part2 =
   |> IO.inspect()
 
 {Solve.part1(disk), part2} |> IO.inspect()
+
+# {6463499258318, 6493634986625}
+# 
+# real    0m44.465s
+# user    0m57.512s
+# sys     0m6.659s
