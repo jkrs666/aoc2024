@@ -35,7 +35,9 @@ defmodule Solve do
   end
 
   def links2(garden, p) do
-    neighbours(garden, p)
+    ns = neighbours(garden, p)
+      case ns do
+      [] -> 
     |> map(fn n -> {{p, n}, garden[p]} end)
     |> dbg(charlists: :as_lists)
   end
@@ -75,7 +77,6 @@ garden =
 links =
   for(y <- 0..n, x <- 0..n, do: {x, y})
   |> map(&Solve.links2(garden, &1))
-  |> group_by(fn {{a, b}, letter} -> letter end)
   |> dbg
 
 #
